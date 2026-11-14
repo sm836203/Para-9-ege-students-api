@@ -1,0 +1,395 @@
+openapi: 3.0.3
+info:
+  description: "Учебный REST API репетитора по истории и обществознанию. Через API\
+    \ можно получать, добавлять, изменять и удалять карточки учеников."
+  title: API учета учеников для подготовки к ЕГЭ
+  version: 1.0.0
+servers:
+- description: Локальная разработка
+  url: http://localhost:8080
+tags:
+- description: Управление учениками и их подготовкой к ЕГЭ
+  name: Students
+paths:
+  /api/students:
+    get:
+      description: "Возвращает всех учеников, при необходимости отфильтрованных по\
+        \ предмету."
+      operationId: list_students
+      parameters:
+      - description: Предмет ЕГЭ для фильтрации.
+        explode: true
+        in: query
+        name: subject
+        required: false
+        schema:
+          $ref: "#/components/schemas/Subject"
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/StudentResponse"
+                type: array
+          description: Список учеников успешно получен.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Недопустимый предмет в параметре subject.
+      summary: Получить список учеников
+      tags:
+      - Students
+      x-openapi-router-controller: openapi_server.controllers.students_controller
+    post:
+      description: Создает карточку ученика на основании переданных данных.
+      operationId: create_student
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentCreate"
+        description: Данные нового ученика.
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentResponse"
+          description: Карточка ученика создана.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Не заполнены обязательные поля либо балл выходит за пределы
+            0–100.
+      summary: Добавить ученика
+      tags:
+      - Students
+      x-openapi-router-controller: openapi_server.controllers.students_controller
+  /api/students/{studentId}:
+    delete:
+      description: Удаляет карточку ученика по идентификатору.
+      operationId: delete_student
+      parameters:
+      - description: Уникальный идентификатор ученика.
+        example: 1
+        explode: false
+        in: path
+        name: studentId
+        required: true
+        schema:
+          format: int64
+          minimum: 1
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+          description: Карточка ученика успешно удалена.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Ученик с указанным идентификатором не найден.
+      summary: Удалить ученика
+      tags:
+      - Students
+      x-openapi-router-controller: openapi_server.controllers.students_controller
+    get:
+      description: Возвращает сведения об одном ученике по его идентификатору.
+      operationId: get_student
+      parameters:
+      - description: Уникальный идентификатор ученика.
+        example: 1
+        explode: false
+        in: path
+        name: studentId
+        required: true
+        schema:
+          format: int64
+          minimum: 1
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentResponse"
+          description: Карточка ученика найдена.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Ученика с переданным идентификатором не существует.
+      summary: Получить карточку ученика
+      tags:
+      - Students
+      x-openapi-router-controller: openapi_server.controllers.students_controller
+    patch:
+      description: "Позволяет изменить только переданные поля, например текущий ба\
+        лл."
+      operationId: update_student
+      parameters:
+      - description: Уникальный идентификатор ученика.
+        example: 1
+        explode: false
+        in: path
+        name: studentId
+        required: true
+        schema:
+          format: int64
+          minimum: 1
+          type: integer
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentUpdate"
+        description: "Поля карточки, которые требуется изменить."
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentResponse"
+          description: Данные ученика успешно обновлены.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Передано пустое обновление или некорректное значение балла.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Ученик с указанным идентификатором не найден.
+      summary: Обновить данные ученика
+      tags:
+      - Students
+      x-openapi-router-controller: openapi_server.controllers.students_controller
+components:
+  parameters:
+    StudentId:
+      description: Уникальный идентификатор ученика.
+      example: 1
+      explode: false
+      in: path
+      name: studentId
+      required: true
+      schema:
+        format: int64
+        minimum: 1
+        type: integer
+      style: simple
+  schemas:
+    Subject:
+      description: Предмет ЕГЭ.
+      enum:
+      - SOCIAL_STUDIES
+      - HISTORY
+      example: SOCIAL_STUDIES
+      title: Subject
+      type: string
+    PreparationStatus:
+      description: Текущий статус занятий.
+      enum:
+      - ACTIVE
+      - PAUSED
+      - COMPLETED
+      example: ACTIVE
+      title: PreparationStatus
+      type: string
+    StudentCreate:
+      additionalProperties: false
+      description: "Поля, которые преподаватель передает при создании карточки."
+      example:
+        fullName: Иванов Петр
+        subject: SOCIAL_STUDIES
+        examYear: 2027
+        targetScore: 85
+        currentScore: 64
+      properties:
+        fullName:
+          description: Фамилия и имя ученика.
+          example: Иванов Петр
+          maxLength: 120
+          minLength: 2
+          title: fullName
+          type: string
+        subject:
+          $ref: "#/components/schemas/Subject"
+        examYear:
+          description: Год сдачи ЕГЭ.
+          example: 2027
+          maximum: 2100
+          minimum: 2026
+          title: examYear
+          type: integer
+        targetScore:
+          description: Желаемый балл ЕГЭ.
+          example: 85
+          maximum: 100
+          minimum: 0
+          title: targetScore
+          type: integer
+        currentScore:
+          default: 0
+          description: "Результат последнего пробника, по умолчанию 0."
+          example: 64
+          maximum: 100
+          minimum: 0
+          title: currentScore
+          type: integer
+      required:
+      - examYear
+      - fullName
+      - subject
+      - targetScore
+      title: StudentCreate
+      type: object
+    StudentUpdate:
+      additionalProperties: false
+      description: "Поля, которые можно частично изменить."
+      example:
+        fullName: fullName
+        subject: SOCIAL_STUDIES
+        examYear: 2031
+        currentScore: 60
+        targetScore: 14
+        status: ACTIVE
+      minProperties: 1
+      properties:
+        fullName:
+          maxLength: 120
+          minLength: 2
+          title: fullName
+          type: string
+        subject:
+          $ref: "#/components/schemas/Subject"
+        examYear:
+          maximum: 2100
+          minimum: 2026
+          title: examYear
+          type: integer
+        currentScore:
+          maximum: 100
+          minimum: 0
+          title: currentScore
+          type: integer
+        targetScore:
+          maximum: 100
+          minimum: 0
+          title: targetScore
+          type: integer
+        status:
+          $ref: "#/components/schemas/PreparationStatus"
+      title: StudentUpdate
+      type: object
+    StudentResponse:
+      additionalProperties: false
+      description: DTO для ответа API без внутренних полей и служебных данных.
+      example:
+        id: 1
+        fullName: Иванов Петр
+        subject: SOCIAL_STUDIES
+        examYear: 2027
+        currentScore: 64
+        targetScore: 85
+        status: ACTIVE
+      properties:
+        id:
+          example: 1
+          format: int64
+          minimum: 1
+          title: id
+          type: integer
+        fullName:
+          example: Иванов Петр
+          title: fullName
+          type: string
+        subject:
+          $ref: "#/components/schemas/Subject"
+        examYear:
+          example: 2027
+          title: examYear
+          type: integer
+        currentScore:
+          example: 64
+          maximum: 100
+          minimum: 0
+          title: currentScore
+          type: integer
+        targetScore:
+          example: 85
+          maximum: 100
+          minimum: 0
+          title: targetScore
+          type: integer
+        status:
+          $ref: "#/components/schemas/PreparationStatus"
+      required:
+      - currentScore
+      - examYear
+      - fullName
+      - id
+      - status
+      - subject
+      - targetScore
+      title: StudentResponse
+      type: object
+    DeleteResult:
+      additionalProperties: false
+      example:
+        studentId: 1
+        message: Карточка ученика удалена.
+      properties:
+        studentId:
+          example: 1
+          format: int64
+          title: studentId
+          type: integer
+        message:
+          example: Карточка ученика удалена.
+          title: message
+          type: string
+      required:
+      - message
+      - studentId
+      title: DeleteResult
+      type: object
+    ErrorResponse:
+      additionalProperties: false
+      description: Публичная схема ошибки без внутреннего трассировочного стека.
+      example:
+        code: STUDENT_NOT_FOUND
+        message: Ученик с указанным идентификатором не найден.
+      properties:
+        code:
+          example: STUDENT_NOT_FOUND
+          title: code
+          type: string
+        message:
+          example: Ученик с указанным идентификатором не найден.
+          title: message
+          type: string
+      required:
+      - code
+      - message
+      title: ErrorResponse
+      type: object
